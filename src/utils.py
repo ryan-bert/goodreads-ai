@@ -18,10 +18,9 @@ def scrape_description(book_id):
             description = description_spans[1].text.strip()
         else:
             description = description_spans[0].text.strip()
+    else:
+        description = "No description available."
 
-    print(f"Description for book ID {book_id}:")
-    print("\n\n")
-    print(description)
-    print("\n\n")
+    return description
 
-
+def 
