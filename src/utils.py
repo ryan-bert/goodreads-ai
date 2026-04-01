@@ -26,14 +26,14 @@ def scrape_description(book_id):
 def print_goodreads_export(books_df):
 
     # Filter for already read books
-    books_df = books_df[books_df['date_read'].notnull()]
+    books_df = books_df.filter(books_df['date_read'].is_not_null())
 
     # Sort by date read descending
-    books_df = books_df.sort_values(by='date_read', ascending=False)
-    
-    # Iterate through over each book
-    for index, row in books_df.iterrows():
-        
+    books_df = books_df.sort('date_read', descending=True)
+
+    # Iterate through each book
+    for row in books_df.iter_rows(named=True):
+
         # Extract and print basic info
         print(f"Title: {row['title']}")
         print(f"Author: {row['author']}")

@@ -1,6 +1,5 @@
 import os
-import re
-import pandas as pd
+import polars as pl
 from utils import scrape_description, print_goodreads_export
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -9,22 +8,28 @@ DATA_DIR = os.path.join(CURRENT_DIR, '../data')
 def main():
 
     # Load user data from CSV
-    books_df = pd.read_csv(os.path.join(DATA_DIR, 'goodreads_library_export.csv'))
+    books_df = pl.read_csv(os.path.join(DATA_DIR, 'goodreads_library_export.csv'))
 
     # Format columns (lowercase, replace spaces with underscores)
-    books_df.columns = [col.lower().replace(' ', '_') for col in books_df.columns]
+    books_df = books_df.rename({col: col.lower().replace(' ', '_') for col in books_df.columns})
 
-    # Select and rename relevant columns
-    books_df = books_df[['book_id', 'title', 'author', 'date_read', 'my_rating', 'my_review']]
+    # Select relevant columns
+    books_df = books_df.select(['book_id', 'title', 'author', 'date_read', 'my_rating', 'my_review'])
 
-    # Make spacing consistent (all columns)
-    books_df = books_df.applymap(lambda x: re.sub(r'\s+', ' ', x).strip() if isinstance(x, str) else x)
+    # Make spacing consistent (all string columns)
+    books_df = books_df.with_columns(
+        pl.col(col).str.replace_all(r'\s+', ' ').str.strip_chars()
+        for col in books_df.columns if books_df[col].dtype == pl.Utf8
+    )
+
+    # Filter to only read books (where date_read is not null)
+    books_df = books_df.filter(books_df['date_read'].is_not_null()).sort('date_read')
 
     # Print all read books
     print_goodreads_export(books_df)
 
     # Iterate through each book and scrape its description
-    for index, row in books_df.iterrows():
+    for row in books_df.iter_rows(named=True):
         book_id = row['book_id']
         scrape_description(book_id)
 
